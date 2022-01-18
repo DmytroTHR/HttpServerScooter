@@ -1,0 +1,41 @@
+syntax = "proto3";
+package user;
+option go_package = "./;proto";
+
+service UserService{
+  rpc CreateUser(User) returns (Response) {}
+  rpc GetUserByID(User) returns (Response) {}
+  rpc GetUsersRole(User) returns (Response) {}
+  rpc SetUsersRole(User) returns (Response) {}
+  rpc AuthUser(User) returns (Response) {}
+  rpc ValidateToken(Token) returns (Response) {}
+}
+
+message Role{
+  int32 id = 1;
+  string name = 2;
+  bool is_admin = 3;
+  bool is_customer = 4;
+  bool is_supplier = 5;
+}
+
+message User{
+  int64 id = 1;
+  string email = 2;
+  Role role = 3;
+  string name = 4;
+  string surname = 5;
+  string password = 6;
+}
+
+message Token{
+  string token = 1;
+  bool valid = 2;
+}
+
+message Response {
+  bool success = 1;
+  User user = 2;
+  Token token = 3;
+  Role role = 4;
+}

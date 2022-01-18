@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+
+  scooterdb:
+    image: postgres
+    container_name: scooter_db
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scooteradmin -d scooterdb"]  
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+    networks:
+      - scooternet
+    ports:
+      - "5444:5432"
+
+  httpserver:
+    container_name: httpserver
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - scooterdb
+    networks:
+      - scooternet
+    ports:
+      - "8888:8888"
+
+  problemservice:
+    container_name: problemservice
+    build:
+      context: .
+      dockerfile: microservice/Dockerfile.problem
+    depends_on:
+      - scooterdb
+    networks:
+      - scooternet
+    ports:
+      - "4444:4444"
+      -
+  userservice:
+    container_name: userservice
+    build:
+      context: .
+      dockerfile: microservice/Dockerfile.user
+    depends_on:
+      - scooterdb
+    networks:
+      - scooternet
+    ports:
+      - "5555:5555"
+
+networks:
+  scooternet:
+    driver: bridge  
+
+volumes:
+  dbdata:
