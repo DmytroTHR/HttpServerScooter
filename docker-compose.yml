@@ -39,20 +39,20 @@ services:
   problemservice:
     container_name: problemservice
     build:
-      context: .
-      dockerfile: microservice/Dockerfile.problem
+      context: ./microservice
+      dockerfile: Dockerfile.problem
     depends_on:
       - scooterdb
     networks:
       - scooternet
     ports:
       - "4444:4444"
-      -
+
   userservice:
     container_name: userservice
     build:
-      context: .
-      dockerfile: microservice/Dockerfile.user
+      context: ./microservice
+      dockerfile: Dockerfile.user
     depends_on:
       - scooterdb
     networks:

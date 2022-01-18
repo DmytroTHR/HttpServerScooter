@@ -4,3 +4,9 @@ go-proto:
 
 go-build:
 	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o bin/httpserver
+
+docker-up:
+	@docker-compose up --build -d
+
+docker-down:
+	@docker-compose down

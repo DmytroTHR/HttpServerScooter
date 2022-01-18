@@ -1,0 +1,6 @@
+[submodule "microservice/UserMicro"]
+	path = microservice/UserMicro
+	url = https://github.com/DmytroTHR/UserMicro.git
+[submodule "microservice/ProblemMicro"]
+	path = microservice/ProblemMicro
+	url = https://github.com/DmytroTHR/ProblemMicro.git
