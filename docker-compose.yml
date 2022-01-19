@@ -5,6 +5,8 @@ services:
   scooterdb:
     image: postgres
     container_name: scooter_db
+    env_file:
+      - .env
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d
       - dbdata:/var/lib/postgresql/data
@@ -26,6 +28,8 @@ services:
 
   httpserver:
     container_name: httpserver
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: Dockerfile
@@ -38,6 +42,8 @@ services:
 
   problemservice:
     container_name: problemservice
+    env_file:
+      - .env
     build:
       context: ./microservice
       dockerfile: Dockerfile.problem
@@ -50,6 +56,8 @@ services:
 
   userservice:
     container_name: userservice
+    env_file:
+      - .env
     build:
       context: ./microservice
       dockerfile: Dockerfile.user

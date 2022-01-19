@@ -6,4 +6,5 @@ RUN make go-build
 
 FROM scratch
 COPY --from=builder /go/src/HttpServer/bin/httpserver /usr/bin/httpserver
+COPY --from=builder /go/src/HttpServer/microservice/certificates/. /home/certificates/
 ENTRYPOINT [ "/usr/bin/httpserver" ]
