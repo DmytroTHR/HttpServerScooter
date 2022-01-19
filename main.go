@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"io/ioutil"
 	"log"
@@ -134,30 +135,54 @@ func workWithRequest(query string, w http.ResponseWriter) {
 			return
 		}
 	case "GetUser":
-		mapParams, ok := request.Parameters.(map[string]interface{})
-		if !ok {
-			fmt.Fprintf(w, "GetUser problem: cannot map params")
-			return
-		}
-		idUser, ok := mapParams["id"]
-		if !ok {
-			fmt.Fprintf(w, "GetUser problem: cannot get ID")
-			return
-		}
-		idConverted, err := strconv.Atoi(idUser.(string))
-		if err != nil {
-			fmt.Fprintf(w, "GetUser problem: cannot convert ID to int64 - %v", err)
-			return
-		}
-		result, err = clientsGRPC.userService.GetUserByID(ctx, &protoUser.User{Id: int64(idConverted)})
+		userToGet := getUserDataFromRequestParams(request.Parameters)
+		putTokenInContextIfAny(&ctx, request.Parameters)
+		result, err = clientsGRPC.userService.GetUserByID(ctx, userToGet)
 		if err != nil {
 			fmt.Fprintf(w, "GetUser error: %v", err)
 			return
 		}
+	case "AuthUser":
+		user := getUserDataFromRequestParams(request.Parameters)
+		result, err = clientsGRPC.userService.AuthUser(ctx, user)
+		if err != nil {
+			fmt.Fprintf(w, "AuthUser error: %v", err)
+			return
+		}
+	case "SetRole":
+		user := getUserDataFromRequestParams(request.Parameters)
+		putTokenInContextIfAny(&ctx, request.Parameters)
+		result, err = clientsGRPC.userService.SetUsersRole(ctx, user)
+		if err != nil {
+			fmt.Fprintf(w, "SetRole error: %v", err)
+			return
+		}
+
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+func putTokenInContextIfAny(ctx *context.Context, params interface{})  {
+	var token string
+	mapParam, ok := params.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	tokenParam, ok := mapParam["token"]
+	if !ok {
+		return
+	}
+
+	token, ok = tokenParam.(string)
+	if !ok {
+		return
+	}
+
+	md := metadata.Pairs("authorization", token)
+	*ctx = metadata.NewOutgoingContext(*ctx, md)
 }
 
 func getUserDataFromRequestParams(params interface{}) *protoUser.User {
@@ -167,10 +192,56 @@ func getUserDataFromRequestParams(params interface{}) *protoUser.User {
 		return resUser
 	}
 
-	resUser.Name = mapParam["name"].(string)
-	resUser.Surname = mapParam["surname"].(string)
-	resUser.Email = mapParam["email"].(string)
-	resUser.Password = mapParam["password"].(string)
-	resUser.Role = &protoUser.Role{Id: 2}
+	if id, ok := mapParam["id"]; ok {
+		idConv, err := strconv.Atoi(id.(string))
+		if err == nil {
+			resUser.Id = int64(idConv)
+		}
+	}
+	if name, ok := mapParam["name"]; ok {
+		resUser.Name = name.(string)
+	}
+	if surname, ok := mapParam["surname"]; ok {
+		resUser.Surname = surname.(string)
+	}
+	if email, ok := mapParam["email"]; ok {
+		resUser.Email = email.(string)
+	}
+	if password, ok := mapParam["password"]; ok {
+		resUser.Password = password.(string)
+	}
+	if roleParams, ok := mapParam["role"]; ok {
+		resUser.Role = getRoleFromRequestParams(roleParams)
+	}
+
 	return resUser
+}
+
+func getRoleFromRequestParams(params interface{}) *protoUser.Role {
+	resRole := &protoUser.Role{}
+	mapParam, ok := params.(map[string]interface{})
+	if !ok {
+		return resRole
+	}
+
+	if id, ok := mapParam["id"]; ok {
+		idConv, err := strconv.Atoi(id.(string))
+		if err == nil {
+			resRole.Id = int32(idConv)
+		}
+	}
+	if name, ok := mapParam["name"]; ok {
+		resRole.Name = name.(string)
+	}
+	if isAdmin, ok := mapParam["is_admin"]; ok {
+		resRole.IsAdmin = isAdmin.(bool)
+	}
+	if isCustomer, ok := mapParam["is_customer"]; ok {
+		resRole.IsCustomer = isCustomer.(bool)
+	}
+	if isSupplier, ok := mapParam["is_supplier"]; ok {
+		resRole.IsSupplier = isSupplier.(bool)
+	}
+
+	return resRole
 }
