@@ -128,43 +128,56 @@ func workWithRequest(query string, w http.ResponseWriter) {
 	var result interface{}
 	switch request.Method {
 	case "CreateUser":
-		userToCreate := getUserDataFromRequestParams(request.Parameters)
+		userToCreate := getUserData(request.Parameters)
 		result, err = clientsGRPC.userService.CreateUser(ctx, userToCreate)
-		if err != nil {
-			fmt.Fprintf(w, "CreateUser error: %v", err)
-			return
-		}
+
 	case "GetUser":
-		userToGet := getUserDataFromRequestParams(request.Parameters)
+		userToGet := getUserData(request.Parameters)
 		putTokenInContextIfAny(&ctx, request.Parameters)
 		result, err = clientsGRPC.userService.GetUserByID(ctx, userToGet)
-		if err != nil {
-			fmt.Fprintf(w, "GetUser error: %v", err)
-			return
-		}
+
 	case "AuthUser":
-		user := getUserDataFromRequestParams(request.Parameters)
+		user := getUserData(request.Parameters)
 		result, err = clientsGRPC.userService.AuthUser(ctx, user)
-		if err != nil {
-			fmt.Fprintf(w, "AuthUser error: %v", err)
-			return
-		}
+
 	case "SetRole":
-		user := getUserDataFromRequestParams(request.Parameters)
+		user := getUserData(request.Parameters)
 		putTokenInContextIfAny(&ctx, request.Parameters)
 		result, err = clientsGRPC.userService.SetUsersRole(ctx, user)
-		if err != nil {
-			fmt.Fprintf(w, "SetRole error: %v", err)
-			return
-		}
 
+	case "GetAllProblems":
+		putTokenInContextIfAny(&ctx, request.Parameters)
+		result, err = clientsGRPC.problemService.GetAllProblems(ctx, &protoProblem.ProblemRequest{})
+
+	case "CreateProblem":
+		putTokenInContextIfAny(&ctx, request.Parameters)
+		problem := getProblemData(request.Parameters)
+		result, err = clientsGRPC.problemService.AddNewProblem(ctx, problem)
+
+	case "SolveProblem":
+		putTokenInContextIfAny(&ctx, request.Parameters)
+		problem := getProblemData(request.Parameters)
+		solution := getSolutionData(request.Parameters)
+		problemsolution := &protoProblem.ProblemSolution{Problem: problem, Solution: solution}
+		result, err = clientsGRPC.problemService.AddProblemSolution(ctx, problemsolution)
+
+	case "ViewSolution":
+		putTokenInContextIfAny(&ctx, request.Parameters)
+		problem := getProblemData(request.Parameters)
+		result, err = clientsGRPC.problemService.GetSolutionByProblem(ctx, problem)
+
+	}
+
+	if err != nil {
+		fmt.Fprintf(w, "%s error: %v", request.Method, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
 }
 
-func putTokenInContextIfAny(ctx *context.Context, params interface{})  {
+func putTokenInContextIfAny(ctx *context.Context, params interface{}) {
 	var token string
 	mapParam, ok := params.(map[string]interface{})
 	if !ok {
@@ -185,7 +198,7 @@ func putTokenInContextIfAny(ctx *context.Context, params interface{})  {
 	*ctx = metadata.NewOutgoingContext(*ctx, md)
 }
 
-func getUserDataFromRequestParams(params interface{}) *protoUser.User {
+func getUserData(params interface{}) *protoUser.User {
 	resUser := &protoUser.User{}
 	mapParam, ok := params.(map[string]interface{})
 	if !ok {
@@ -211,13 +224,13 @@ func getUserDataFromRequestParams(params interface{}) *protoUser.User {
 		resUser.Password = password.(string)
 	}
 	if roleParams, ok := mapParam["role"]; ok {
-		resUser.Role = getRoleFromRequestParams(roleParams)
+		resUser.Role = getRoleData(roleParams)
 	}
 
 	return resUser
 }
 
-func getRoleFromRequestParams(params interface{}) *protoUser.Role {
+func getRoleData(params interface{}) *protoUser.Role {
 	resRole := &protoUser.Role{}
 	mapParam, ok := params.(map[string]interface{})
 	if !ok {
@@ -244,4 +257,70 @@ func getRoleFromRequestParams(params interface{}) *protoUser.Role {
 	}
 
 	return resRole
+}
+
+func getProblemData(params interface{}) *protoProblem.Problem {
+	resProblem := &protoProblem.Problem{}
+	mapParam, ok := params.(map[string]interface{})
+	if !ok {
+		return resProblem
+	}
+
+	if id, ok := mapParam["id"]; ok {
+		idConv, err := strconv.Atoi(id.(string))
+		if err == nil {
+			resProblem.Id = int64(idConv)
+		}
+	}
+	if userid, ok := mapParam["user_id"]; ok {
+		idConv, err := strconv.Atoi(userid.(string))
+		if err == nil {
+			resProblem.UserId = int64(idConv)
+		}
+	}
+	if description, ok := mapParam["description"]; ok {
+		resProblem.Description = description.(string)
+	}
+	if solved, ok := mapParam["is_solved"]; ok {
+		resProblem.IsSolved = solved.(bool)
+	}
+	if roleParams, ok := mapParam["type"]; ok {
+		resProblem.Type = getTypeData(roleParams)
+	}
+
+	return resProblem
+}
+
+func getTypeData(params interface{}) *protoProblem.ProblemType {
+	resType := &protoProblem.ProblemType{}
+	mapParam, ok := params.(map[string]interface{})
+	if !ok {
+		return resType
+	}
+
+	if id, ok := mapParam["id"]; ok {
+		idConv, err := strconv.Atoi(id.(string))
+		if err == nil {
+			resType.Id = int32(idConv)
+		}
+	}
+	if name, ok := mapParam["name"]; ok {
+		resType.Name = name.(string)
+	}
+
+	return resType
+}
+
+func getSolutionData(params interface{}) *protoProblem.Solution {
+	resSolution := &protoProblem.Solution{}
+	mapParam, ok := params.(map[string]interface{})
+	if !ok {
+		return resSolution
+	}
+
+	if description, ok := mapParam["description"]; ok {
+		resSolution.Description = description.(string)
+	}
+
+	return resSolution
 }
