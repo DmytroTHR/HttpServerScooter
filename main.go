@@ -156,9 +156,7 @@ func workWithRequest(query string, w http.ResponseWriter) {
 
 	case "SolveProblem":
 		putTokenInContextIfAny(&ctx, request.Parameters)
-		problem := getProblemData(request.Parameters)
-		solution := getSolutionData(request.Parameters)
-		problemsolution := &protoProblem.ProblemSolution{Problem: problem, Solution: solution}
+		problemsolution := getProblemSolutionData(request.Parameters)
 		result, err = clientsGRPC.problemService.AddProblemSolution(ctx, problemsolution)
 
 	case "ViewSolution":
@@ -323,4 +321,21 @@ func getSolutionData(params interface{}) *protoProblem.Solution {
 	}
 
 	return resSolution
+}
+
+func getProblemSolutionData(params interface{}) *protoProblem.ProblemSolution {
+	resProblemSolution := &protoProblem.ProblemSolution{}
+	mapParam, ok := params.(map[string]interface{})
+	if !ok {
+		return resProblemSolution
+	}
+
+	if problem, ok := mapParam["problem"]; ok {
+		resProblemSolution.Problem = getProblemData(problem)
+	}
+	if solution, ok := mapParam["solution"]; ok {
+		resProblemSolution.Solution = getSolutionData(solution)
+	}
+
+	return resProblemSolution
 }
